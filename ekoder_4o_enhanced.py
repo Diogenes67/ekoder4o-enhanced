@@ -83,9 +83,10 @@ p, div, span {
 col1, col2 = st.columns([1, 10])
 with col1:
     # Option 1: If you have a logo file (uncomment the line below)
-    st.image("assets/logo.png", width=100)
+    # st.image("assets/logo.png", width=60)
     
-    
+    # Option 2: Using emoji as logo (most reliable)
+    st.markdown("# 🌿")
     
 with col2:
     st.title("EKoder Pro – ED Diagnosis Coder")
@@ -114,11 +115,11 @@ with st.expander("💰 Complexity Code Weighting (only one factor in funding)", 
     | Symbol | Range |
     |--------|-------|
     | $ | <$600 |
-    | $$ | $600-$800 |
-    | $$$ | $800-$1000 |
-    | $$$$ | $1000-$1200 |
-    | $$$$$ | $1200-$1400 |
-    | $$$$$$ | >$1400 |
+    | $ | $600-$800 |
+    | $$ | $800-$1000 |
+    | $$ | $1000-$1200 |
+    | $$$ | $1200-$1400 |
+    | $$$ | >$1400 |
     """)
 
 # Show warning here if enhanced matcher not available
@@ -343,6 +344,14 @@ def process_note(note_text: str):
     with st.spinner("Analyzing casenote…"):
         key_symptoms = extract_key_symptoms(note_text)
 
+        # Debug: Check which ranking method is being used
+        if debug_mode:
+            st.sidebar.write("🔍 **Debug Info:**")
+            st.sidebar.write(f"Enhanced Available: {ENHANCED_AVAILABLE}")
+            st.sidebar.write(f"Use Enhanced: {use_enhanced_ranking}")
+            st.sidebar.write(f"Enhanced Matcher: {'Loaded' if enhanced_matcher else 'Not Loaded'}")
+            st.sidebar.write(f"Ranking Method: {ranking_method}")
+
         # Choose ranking method based on settings
         if use_enhanced_ranking and enhanced_matcher and ranking_method:
             # Use enhanced matcher
@@ -396,33 +405,52 @@ def process_note(note_text: str):
         )
 
         # ---------- GPT prompt (FIXED VERSION) ----------
-        prompt = f"""{fewshot}You are an expert Australian emergency physician and senior clinical coder with 20+ years of experience.
+        prompt = f"""{fewshot}
+You are an expert Australian emergency physician and senior clinical coder with 20+ years' experience.  
+Your task is to select the single most appropriate ICD-10-AM ED Short List principal diagnosis code.
 
-CRITICAL INSTRUCTIONS:
-1. Your response MUST start with "1. "
-2. Choose the SINGLE BEST ED principal diagnosis from the provided shortlist
-3. Format: "1. CODE — Term — Brief explanation"
-4. Provide differentials (lines 2–4) for ANY of these situations:
-   - Clinical presentation has overlapping features with other conditions
-   - Mentioned differentials in your explanation
-   - Diagnostic certainty is <85%
-   - Standard ED practice would consider ruling out other conditions
-5. If you mention other conditions in your explanation, you MUST list them as differentials
+1. **Primary Response**  
+   - **Must start with "1. "**  
+   - **Format exactly:**  
+     `1. CODE — Short List term — Detailed teaching-style explanation`  
+   - **Explanation:** At least 2–3 sentences outlining  
+     - how the code matches the key clinical features  
+     - why other close alternatives are less suitable  
+     - relevant ACS or Tabular List guidance you applied  
 
-KEY SYMPTOMS IDENTIFIED: {key_symptoms if key_symptoms else "None clearly identified"}
+2. **Differentials (ONLY if applicable)**  
+   **Only provide additional codes (2-4) if ANY of these conditions are met:**
+   - The primary diagnosis has <85% certainty
+   - Multiple conditions equally explain the presentation
+   - Standard ED practice requires ruling out dangerous differentials
+   - The clinical picture is genuinely ambiguous
+   
+   If differentials are needed, format as:
+   `N. CODE — Term — One-sentence rationale`
 
-AVAILABLE ED CODES (top 50 by relevance):
+3. **Selection Rules**  
+   - No definitive diagnosis → code the predominant symptom
+   - Injuries → code specific injury plus anatomical site
+   - Poisoning/venoms → code the substance or agent
+   - Always choose the condition chiefly responsible for attendance
+
+**Key Symptoms:** {key_symptoms or "None identified"}  
+**Available ED Codes (top 50 by relevance):**  
 {opts_text}
-
-Casenote:
+**Casenote:**  
 {note_text}
 
-IMPORTANT: Your response must follow this exact format:
-1. CODE — Term from list — Your clinical explanation
-2. CODE — Term from list — Why this is a differential
-3. CODE — Term from list — Why this is a differential
+IMPORTANT: 
+- Always provide code 1 (primary diagnosis)
+- Only add codes 2-4 if truly necessary per the criteria above
+- Many cases only need ONE code - that's perfectly fine
+- Format: CODE — Term from list — Explanation"""
 
-Include the full term from the provided list for each code."""
+        # Show prompt in debug mode (AFTER prompt is created)
+        if debug_mode:
+            st.sidebar.write("**📝 GPT Prompt Preview:**")
+            with st.sidebar.expander("View full prompt", expanded=False):
+                st.text_area("Prompt being sent:", prompt, height=300)
 
     # ---------- GPT call ----------
     try:
