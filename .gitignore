@@ -33,3 +33,16 @@ Thumbs.db
 # Secrets
 .env
 secrets.toml
+venv/
+openai-env/
+phlox/
+ai-clinical-scribe/ git rm -r --cached venv openai-env phlox ai-clinical-scribe
+venv/
+openai-env/
+phlox/
+ai-clinical-scribe/
+openai-env/
+edcode_env/
+phlox/
+ai-clinical-scribe/
+venv/
